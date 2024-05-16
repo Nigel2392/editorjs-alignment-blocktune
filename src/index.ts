@@ -1,7 +1,3 @@
-/**
- * Build styles
- */
-
 import './index.css';
 
 export {
