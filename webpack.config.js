@@ -1,44 +1,30 @@
+const path = require('path');
+
 module.exports = {
-  entry: './src/index.js',
-  mode: "production",
-  // ES5(IE11等)向けの指定
-  target: ["web", "es5"],
-  module: {
-    rules: [
-      {
-        test: /\.js$/,
-        exclude: /node_modules/,
-        use: [
-          {
-            loader: 'babel-loader',
-            options: {
-              presets: [ '@babel/preset-env' ],
+    entry: './src/index.ts',
+    output: {
+        'path': path.resolve(__dirname, 'dist/'),
+        'filename': 'bundle.js'
+    },
+    resolve: {
+        extensions: ['.ts', '...'],
+    },
+    mode: 'production',
+    module: {
+        rules: [
+            {
+                test: /\.css$/i,
+                exclude: '/node_modules/',
+                use: [
+                    'style-loader',
+                    'css-loader',
+                ]
             },
-          },
+            {
+                test: /\.ts$/i,
+                use: 'ts-loader',
+                exclude: '/node_modules/'
+            }
         ]
-      },
-      {
-        test: /\.css$/,
-        use: [
-          'style-loader',
-          'css-loader'
-        ]
-      },
-      {
-        test: /\.(svg)$/,
-        use: [
-          {
-            loader: 'raw-loader',
-          }
-        ]
-      }
-    ]
-  },
-  output: {
-    path: __dirname + '/dist',
-    publicPath: '/',
-    filename: 'bundle.js',
-    library: 'AlignmentBlockTune',
-    libraryTarget: 'umd'
-  }
-};
+    }
+}

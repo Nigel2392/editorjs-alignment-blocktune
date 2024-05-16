@@ -1,34 +1,51 @@
 /**
  * Build styles
  */
-require('./index.css').toString();
-const {make} = require('./util');
+
+import './index.css';
+
+export {
+    AlignmentBlockTune,
+    AlignmentType,  
+};
+
+function make(tagName: string, classNames: string | string[] = '', attributes: {[key: string]: string} = {}) {
+    const el = document.createElement(tagName);
+  
+    if (Array.isArray(classNames)) {
+      el.classList.add(...classNames);
+    } else if (classNames) {
+      el.classList.add(classNames);
+    }
+  
+    for (const attrName in attributes) {
+      el[attrName] = attributes[attrName];
+    }
+    return el;
+}
+
+type AlignmentType = 'left' | 'center' | 'right';
 
 class AlignmentBlockTune {
-
-    /**
-     * Default alignment
-     *
-     * @public
-     * @returns {string}
-     */
-    static get DEFAULT_ALIGNMENT() {
-        return 'left';
-    }
-
-    static get isTune() {
-        return true;
-    }
-
-    getAlignment(){
-        if(!!this.settings?.blocks && this.settings.blocks.hasOwnProperty(this.block.name)){
-            return this.settings.blocks[this.block.name]
+    settings: {
+        default: AlignmentType,
+        blocks: {[key: string]: AlignmentType}
+    };
+    data: {
+        alignment: AlignmentType
+    };
+    block: any;
+    api: any;
+    wrapper: HTMLElement;
+    alignmentSettings: {name: AlignmentType, icon: string}[];
+    _CSS: {
+        alignment: {
+            left: string,
+            center: string,
+            right: string
         }
-        if(!!this.settings?.default){
-            return this.settings.default
-        }
-        return AlignmentBlockTune.DEFAULT_ALIGNMENT
-    }
+    };
+
     /**
      *
      * @param api
@@ -73,6 +90,29 @@ class AlignmentBlockTune {
         }
     }
 
+    static get DEFAULT_ALIGNMENT() {
+        return 'left';
+    }
+
+    static get isTune() {
+        return true;
+    }
+
+    getAlignment(){
+        if ((this.constructor as any).blockAlignment) {
+            let align = (this.constructor as any).blockAlignment;
+            (this.constructor as any).blockAlignment = null;
+            return align;
+        }
+        if(!!this.settings?.blocks && this.settings.blocks.hasOwnProperty(this.block.name)){
+            return this.settings.blocks[this.block.name]
+        }
+        if(!!this.settings?.default){
+            return this.settings.default
+        }
+        return AlignmentBlockTune.DEFAULT_ALIGNMENT
+    }
+
     /**
      * block自体をwrapしてくれる
      * constructorで与えられたalignmentを代入しようとすると、holderが確定してなく
@@ -83,6 +123,14 @@ class AlignmentBlockTune {
         this.wrapper = make("div");
         this.wrapper.classList.toggle(this._CSS.alignment[this.data.alignment])
         this.wrapper.append(blockContent)
+        setTimeout(() => {
+            this.api.listeners.on(this.block.holder, 'keydown', (e: KeyboardEvent) => {
+                if (e.key === 'Enter') {
+                    (this.constructor as any).blockAlignment = this.data.alignment;
+                }
+            });
+
+        }, 0)
         return this.wrapper
     }
 
@@ -93,25 +141,40 @@ class AlignmentBlockTune {
     render() {
         const wrapper = make("div");
         this.alignmentSettings.map(align => {
+            // Create button
             const button = document.createElement('button');
             button.classList.add(this.api.styles.settingsButton);
             button.innerHTML = align.icon;
             button.type = 'button';
 
-            button.classList.toggle(this.api.styles.settingsButtonActive, align.name === this.data.alignment);
+            // Match current block's alignment to classnames
+            button.classList.toggle(
+                this.api.styles.settingsButtonActive,
+                align.name === this.data.alignment,
+            );
+
+            // Initialize tooltip
+            this.api.tooltip.onHover(
+                button,
+                this.api.i18n.t(`Align ${align.name}`),
+                { placement: 'top', offset: 5 }
+            );
+
             wrapper.appendChild(button);
             return button
         }).forEach((element, index, elements) => {
             element.addEventListener('click', () => {
+                const direction = this.alignmentSettings[index].name;
                 this.data = {
-                    alignment: this.alignmentSettings[index].name
-                }
+                    alignment: direction
+                };
                 elements.forEach((el, i) => {
                     const {name} = this.alignmentSettings[i];
                     el.classList.toggle(this.api.styles.settingsButtonActive, name === this.data.alignment);
                     //toggle alignment style class for block
                     this.wrapper.classList.toggle(this._CSS.alignment[name], name === this.data.alignment)
                 });
+                this.block.dispatchChange();
             });
         });
         return wrapper;
@@ -125,4 +188,4 @@ class AlignmentBlockTune {
     }
 }
 
-module.exports = AlignmentBlockTune;
+(window as any).AlignmentBlockTune = AlignmentBlockTune;
